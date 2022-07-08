@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.w3.org/1999/xhtml">
+
+<th:block th:replace="layout/fragment/header :: header"></th:block>
+<th:block th:fragment="content">
+    <h1 class="mt-4">공지사항</h1>
+    <form th:action="@{/notice/register}" th:method="post">
+
+        <div class="form-group">
+            <label > Title</label>
+            <input type="text" class="form-control" name="title" placeholder="Enter Title">
+        </div>
+        <div class="form-group">
+            <label >Content</label>
+            <textarea class = "form-control" rows="5" name="content"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label >Writer Id</label>
+            <input type="email" class="form-control" name="writerId" placeholder="id" >
+        </div>
+
+        <button type="submit" class="btn btn-primary">저장</button>
+    </form>
+</th:block>
+</th:blcok>
+
+</html>

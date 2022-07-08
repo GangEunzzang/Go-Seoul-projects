@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<th:block th:replace="layout/fragment/header :: header"></th:block>
+<th:block th:fragment="content">
+    <h1 class="mt-4">Q&A</h1>
+    <div class="form-group">
+        <label >Bno</label>
+        <input type="text" class="form-control" name="bno" th:value="${dto.bno}" readonly>
+    </div>
+
+    <div class="form-group">
+        <label >Title</label>
+        <input type="text" class="form-control" name="title" th:value="${dto.title}"readonly>
+    </div>
+
+    <div class="form-group">
+        <label >Content</label>
+        <textarea class="form-control" rows="5" name="text"readonly>
+                [[${dto.content}]]
+                </textarea>
+    </div>
+
+    <div class="form-group">
+        <label >Writer</label>
+        <input type="text" class="form-control" name="writer" th:value="${dto.writerId}"readonly>
+    </div>
+
+    <div class="form-group">
+        <label >RegDate</label>
+        <input type="text" class="form-control" name="regDate" th:value="${#temporals.format(dto.regDate, 'yyyy/MM/dd HH:mm:ss')}"readonly>
+    </div>
+
+    <!---------로그인한 아이디------------>
+    <input sec:authorize="isAuthenticated()" class="security" type="hidden" th:value="${#authentication.principal.username}"/>
+    <!---------로그인한 아이디------------>
+
+    <!---------로그인 아이디와 작성자 아이디가 같으면 수정버튼 출력--------->
+    <a id="modify-btn" th:href="@{/free/modify(bno=${dto.bno})}"></a>
+    <!---------로그인 아이디와 작성자 아이디가 같으면 수정버튼 출력--------->
+
+    <a href="/free/list">
+        <button type="button" class="btn btn-info">목록</button>
+    </a>
+    <!----리뷰------>
+    <div >
+        <div class="mt-4">
+            <h5 ><span sec:authorize="isAuthenticated()" class="badge badge-info addReply" style="cursor:pointer" >댓글 작성</span> </h5>
+            <h5 ><span class="badge badge-secondary replyCount" style="cursor:pointer"> Reply Count  [[${dto.replyCount}]]</span> </h5>
+        </div>
+        <div class="list-group replyList">
+
+        </div>
+    </div>
+
+    <!-- 모달창 --------------------------------------------------------------------------------------------->
+    <div class="modal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">댓글</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times</span>
+                    </button>
+                </div>
+
+                <div class="modal-body">
+
+                    <div class="form-group">
+
+                        <input class="form-control"  type="text" name="replyContent" placeholder="Reply Text...">
+
+                    </div>
+                    <div class="form-group">
+                        <input class="form-control"  type="hidden" name="id" placeholder="ID">
+                        <input type="hidden" name="rno">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-danger replyRemove">Remove</button>
+                    <button type="button" class="btn btn-warning replyModify">Modify</button>
+                    <button type="button" class="btn btn-primary replySave">Save</button>
+                    <button type="button" class="btn btn-outline-secondary replyClose" data-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 모달창 -->
+
+    <script th:inline="javascript">
+            $(document).ready(function() {
+                /* 댓글목록 ***************************************************************************/
+
+                var bno = [[${dto.bno}]];
+
+                var listGroup = $(".replyList");
+                  $(".replyCount").click(function(){
+
+                    $.getJSON('/replies/free/'+bno, function(arr){
+
+                        console.log(arr);
+
+                    })//end getJSON
+
+
+                })//end click
+
+                //댓글이 추가될 영역
+                var listGroup  = $(".replyList");
+
+                //날짜 처리를 위한 함수
+                function formatTime(str) {
+                    var date = new Date(str);
+
+                    return date.getFullYear() + '/' +
+                        (date.getMonth() + 1) + '/' +
+                        date.getDate() + ' ' +
+                        date.getHours() + ':' +
+                        date.getMinutes();
+                }
+                //특정한 게시글의 댓글을 처리하는 함수
+                function loadJSONData() {
+                    $.getJSON('/replies/free/' + bno, function (arr) {
+                        console.log(arr);
+                        var str = "";
+                        $('.replyCount').html(" Reply Count  " + arr.length);
+
+                        $.each(arr, function (idx, reply) {
+                            console.log(reply);
+                            str += '    <div class="card-body" data-rno="'+reply.rno+'">';
+                            str += '    <h5 class="card-title">' + reply.content + '</h5>';
+                            str += '    <h6 class="card-subtitle mb-2 text-muted">' + reply.id + '</h6>';
+                            str += '    <p class="card-text">' + formatTime(reply.regDate) + '</p>';
+                            str += '    </div>';
+                        })
+
+                        listGroup.html(str);
+                    });
+                }
+                loadJSONData();//댓글목록출력
+
+                 $(".replyCount").click(function(){
+                     loadJSONData();
+                 })//end click
+                /* 댓글목록 */
+
+
+                /* 댓글등록 ***************************************************************************/
+                var modal=$(".modal");
+                $(".addReply").click(function (){
+                    modal.modal("show");
+                    $('input[name="replyContent"]').val('');
+                    $('input[name="id"]').val('');
+
+                    $(".modal-footer .btn").hide();
+                    $(".replySave, .replyClose").show();
+                });
+                $(".replySave").click(function(){
+                    var reply={
+                        bno:bno,
+                        content:$('input[name="replyContent"]').val(),
+                        id:$('input[name="id"]').val()
+                    };
+                    $.ajax({
+                        url: '/replies/', //서버주소
+                        method: 'post',  //전송방식
+                        data: JSON.stringify(reply), //서버로 전송하는 데이터
+                        contentType: 'application/json; charset=utf-8',//서버로 전송하는 데이터의 형식
+                        dataType: 'json',//서버에서 전송되는 데이터의 형식
+                        success:function (data){ //서버에서 성공적으로 데이터가 전송되면, 전송데이터는 data에 저장됨
+                            var newRno=parseInt(data);
+                            alert(newRno+"번 댓글이 등록되었습니다.");
+                            modal.modal("hide");
+                            loadJSONData();//목록갱신
+                        }
+
+                    });
+                });
+                /* 댓글등록 */
+
+                /* 댓글삭제 *******************************************************/
+                //delegate 사용
+                $('.replyList').on("click",".card-body",function(){
+                    $(".modal-footer .btn").hide();
+                    $(".replyClose").show()
+                    $(".replyRemove, .replyModify").hide();
+
+                    var reviewClick=$(this);
+
+                    var revWriter=reviewClick.find('.card-subtitle').html();
+
+                     console.log("------revWriter---------");
+                     console.log(revWriter);
+                     console.log("------revWriter---------");
+                     var LoginUser=$(".security").val();
+                     console.log("------Login---------");
+                     console.log(LoginUser);
+                     console.log("------login---------");
+
+                    if(LoginUser==revWriter){
+                        $(".replyRemove, .replyModify").show();
+                    }
+
+                    var rno=$(this).data("rno");
+                    $("input[name='replyContent']").val($(this).find('.card-title').html());
+                    $("input[name='id']").val($(this).find('.card-subtitle').html());
+                    $("input[name='rno']").val(rno);
+
+
+
+                    modal.modal('show');
+                });
+                $(".replyRemove").on("click",function (){
+                    if(!confirm("삭제하시겠습니까?")){
+                        return;
+                    }
+                    var rno=$("input[name='rno']").val();
+                    $.ajax({
+                        url:'/replies/'+rno,
+                        method:'delete',
+                        success:function(result){
+                            if(result==='success'){
+                                alert("댓글이 삭제되었습니다");
+                                modal.modal('hide');
+                                loadJSONData();//목록갱신
+                            }
+                        }
+                    });
+                });
+                /* 댓글삭제 */
+
+                /* 댓글수정 *****************************************************************************/
+                $(".replyModify").click(function(){
+                    if(!confirm("수정하시겠습니까?")){
+                        return;
+                    }
+                    var rno=$("input[name='rno']").val();
+
+                    var reply={
+                        rno: rno,
+                        bno:bno,
+                        content:$('input[name="replyContent"]').val(),
+                        id:$('input[name="id"]').val()
+                    };
+                    console.log("Dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd");
+                    $.ajax({
+                        url:'/replies/'+rno,
+                        method:'put',
+                        data: JSON.stringify(reply), //서버로 전송하는 데이터
+                        contentType: 'application/json; charset=utf-8',  //서버로 전송하는 데이터의 형식
+                        success:function (result){ //서버에서 성공적으로 데이터가 전송되면, 전송데이터는 result에 저장됨
+                            if(result==='success'){
+                                alert("댓글이 수정되었습니다");
+                                modal.modal('hide');
+                                loadJSONData();//목록갱신
+                            }
+                        }
+                    });
+                });
+                /* 댓글수정 */
+
+
+
+
+            });
+        </script>
+    <script th:inline="javascript">
+        var str ="";
+        var security = $(".security").val();
+        var id = [[${dto.writerId}]];
+        var modify = $("#modify-btn");
+
+        console.log("로그인한 아이디"+security);
+        console.log("글쓴이"+id);
+
+        if(security == id){
+            str+='<button type="button" class="btn btn-primary">수정</button>';
+            modify.html(str);
+        }
+    </script >
+</th:block>
+
+
+</html>
